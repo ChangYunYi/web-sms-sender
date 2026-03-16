@@ -130,6 +130,29 @@ textarea {
   transform: scale(0.98);
 }
 
+/* 폼 버튼 영역 */
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.form-actions .btn-primary {
+  flex: 1;
+}
+
+.btn-save-template {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1.5px solid #bbf7d0;
+  padding: 14px 16px;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.btn-save-template:hover {
+  background: #dcfce7;
+}
+
 .btn-primary {
   background: #2563eb;
   color: white;
@@ -477,6 +500,22 @@ textarea {
 
 .btn-secondary-dark:hover {
   background: #e2e8f0;
+}
+
+/* ── 저장된 멘트 섹션 ── */
+.templates-section {
+  margin-top: 24px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 20px;
+}
+
+.template-card .contact-main {
+  cursor: pointer;
+}
+
+.template-card:hover {
+  border-color: #86efac;
+  background: #f0fdf4;
 }
 
 /* 반응형 */

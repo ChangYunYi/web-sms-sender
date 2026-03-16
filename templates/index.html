@@ -65,15 +65,36 @@
         ></textarea>
       </div>
 
-      <button
-        type="submit"
-        class="btn btn-primary"
-        id="sendBtn"
-        {% if not configured %}disabled{% endif %}
-      >
-        <span id="sendBtnText">문자 보내기</span>
-      </button>
+      <div class="form-actions">
+        <button
+          type="submit"
+          class="btn btn-primary"
+          id="sendBtn"
+          {% if not configured %}disabled{% endif %}
+        >
+          <span id="sendBtnText">문자 보내기</span>
+        </button>
+        <button
+          type="button"
+          class="btn btn-save-template"
+          onclick="saveTemplate()"
+          title="현재 메시지를 멘트로 저장"
+        >멘트 저장</button>
+      </div>
     </form>
+
+    <!-- 저장된 멘트 -->
+    <section class="templates-section" id="templatesSection">
+      <div class="contacts-header">
+        <span class="contacts-title">저장된 멘트</span>
+        <span class="contacts-count" id="templatesCount"></span>
+      </div>
+      <div id="templatesList" class="contacts-list">
+        <p class="contacts-empty" id="templatesEmpty" style="display:none;">
+          메시지를 작성한 뒤 '멘트 저장' 버튼을 누르면 저장됩니다.
+        </p>
+      </div>
+    </section>
 
     <!-- 결과 메시지 -->
     <div id="resultBox" class="result-box" style="display:none;"></div>
@@ -263,6 +284,88 @@
     await loadContacts();
   }
 
+  // ── 멘트 저장 (localStorage) ──────────────────────────────
+
+  function getTemplates() {
+    try { return JSON.parse(localStorage.getItem('sms_templates') || '[]'); }
+    catch { return []; }
+  }
+
+  function setTemplates(list) {
+    localStorage.setItem('sms_templates', JSON.stringify(list));
+  }
+
+  function saveTemplate() {
+    const msg = document.getElementById('message').value.trim();
+    if (!msg) { alert('저장할 메시지를 먼저 입력해주세요.'); return; }
+
+    const title = prompt('멘트 이름을 입력하세요:', msg.substring(0, 20));
+    if (title === null) return;
+
+    const templates = getTemplates();
+    templates.unshift({
+      id: Date.now(),
+      title: title.trim() || msg.substring(0, 20),
+      content: msg,
+    });
+    setTemplates(templates);
+    loadTemplates();
+  }
+
+  function loadTemplates() {
+    const templates = getTemplates();
+    const list = document.getElementById('templatesList');
+    const empty = document.getElementById('templatesEmpty');
+    const count = document.getElementById('templatesCount');
+
+    list.querySelectorAll('.template-card').forEach(el => el.remove());
+
+    if (templates.length === 0) {
+      empty.style.display = 'block';
+      count.textContent = '';
+      return;
+    }
+
+    empty.style.display = 'none';
+    count.textContent = templates.length + '개';
+
+    templates.forEach(t => {
+      const card = document.createElement('div');
+      card.className = 'contact-card template-card';
+
+      const preview = t.content.length > 40 ? t.content.substring(0, 40) + '...' : t.content;
+
+      card.innerHTML = `
+        <div class="contact-main" onclick="useTemplate(${t.id})" title="${escHtml(t.content)}">
+          <span class="contact-name">${escHtml(t.title)}</span>
+          <span class="contact-sub">${escHtml(preview)}</span>
+        </div>
+        <div class="contact-actions">
+          <button class="contact-btn del-btn" title="삭제" onclick="deleteTemplate(${t.id})">×</button>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  function useTemplate(id) {
+    const templates = getTemplates();
+    const t = templates.find(x => x.id === id);
+    if (!t) return;
+
+    const msgEl = document.getElementById('message');
+    msgEl.value = t.content;
+    msgEl.focus();
+    msgEl.dispatchEvent(new Event('input'));
+  }
+
+  function deleteTemplate(id) {
+    if (!confirm('이 멘트를 삭제할까요?')) return;
+    const templates = getTemplates().filter(x => x.id !== id);
+    setTemplates(templates);
+    loadTemplates();
+  }
+
   // ── 유틸 ──
   function escHtml(str) {
     return String(str)
@@ -278,6 +381,7 @@
 
   // 초기 로드
   loadContacts();
+  loadTemplates();
 </script>
 </body>
 </html>
