@@ -6,4 +6,5 @@ build/
 *.pyc
 .env
 contacts.json
+templates.json
 browser_data/

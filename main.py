@@ -39,6 +39,7 @@ import uvicorn
 
 from sms_sender import send_sms, is_configured
 import contacts as contacts_db
+import templates_store
 
 app = FastAPI(title="웹 문자 보내기")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -133,6 +134,30 @@ async def api_update_contact(contact_id: int, body: ContactUpdate):
 @app.delete("/api/contacts/{contact_id}")
 async def api_delete_contact(contact_id: int):
     success = contacts_db.delete_contact(contact_id)
+    return {"success": success}
+
+
+# ── 멘트(템플릿) API ─────────────────────────────────────────
+
+@app.get("/api/templates")
+async def api_get_templates():
+    return templates_store.get_templates()
+
+
+class TemplateCreate(BaseModel):
+    title: str
+    content: str
+
+
+@app.post("/api/templates")
+async def api_add_template(body: TemplateCreate):
+    template = templates_store.add_template(body.title.strip(), body.content.strip())
+    return template
+
+
+@app.delete("/api/templates/{template_id}")
+async def api_delete_template(template_id: int):
+    success = templates_store.delete_template(template_id)
     return {"success": success}
 
 
