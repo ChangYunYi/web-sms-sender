@@ -284,52 +284,48 @@
     await loadContacts();
   }
 
-  // ── 멘트 저장 (localStorage) ──────────────────────────────
+  // ── 멘트 저장 (서버 API) ────────────────────────────────────
 
-  function getTemplates() {
-    try { return JSON.parse(localStorage.getItem('sms_templates') || '[]'); }
-    catch { return []; }
-  }
+  let _templates = [];
 
-  function setTemplates(list) {
-    localStorage.setItem('sms_templates', JSON.stringify(list));
-  }
-
-  function saveTemplate() {
+  async function saveTemplate() {
     const msg = document.getElementById('message').value.trim();
     if (!msg) { alert('저장할 메시지를 먼저 입력해주세요.'); return; }
 
     const title = prompt('멘트 이름을 입력하세요:', msg.substring(0, 20));
     if (title === null) return;
 
-    const templates = getTemplates();
-    templates.unshift({
-      id: Date.now(),
-      title: title.trim() || msg.substring(0, 20),
-      content: msg,
+    await fetch('/api/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: title.trim() || msg.substring(0, 20),
+        content: msg,
+      }),
     });
-    setTemplates(templates);
-    loadTemplates();
+    await loadTemplates();
   }
 
-  function loadTemplates() {
-    const templates = getTemplates();
+  async function loadTemplates() {
+    const res = await fetch('/api/templates');
+    _templates = await res.json();
+
     const list = document.getElementById('templatesList');
     const empty = document.getElementById('templatesEmpty');
     const count = document.getElementById('templatesCount');
 
     list.querySelectorAll('.template-card').forEach(el => el.remove());
 
-    if (templates.length === 0) {
+    if (_templates.length === 0) {
       empty.style.display = 'block';
       count.textContent = '';
       return;
     }
 
     empty.style.display = 'none';
-    count.textContent = templates.length + '개';
+    count.textContent = _templates.length + '개';
 
-    templates.forEach(t => {
+    _templates.forEach(t => {
       const card = document.createElement('div');
       card.className = 'contact-card template-card';
 
@@ -349,8 +345,7 @@
   }
 
   function useTemplate(id) {
-    const templates = getTemplates();
-    const t = templates.find(x => x.id === id);
+    const t = _templates.find(x => x.id === id);
     if (!t) return;
 
     const msgEl = document.getElementById('message');
@@ -359,11 +354,10 @@
     msgEl.dispatchEvent(new Event('input'));
   }
 
-  function deleteTemplate(id) {
+  async function deleteTemplate(id) {
     if (!confirm('이 멘트를 삭제할까요?')) return;
-    const templates = getTemplates().filter(x => x.id !== id);
-    setTemplates(templates);
-    loadTemplates();
+    await fetch(`/api/templates/${id}`, { method: 'DELETE' });
+    await loadTemplates();
   }
 
   // ── 유틸 ──
@@ -379,9 +373,28 @@
     return String(str).replace(/'/g, "\\'");
   }
 
-  // 초기 로드
-  loadContacts();
-  loadTemplates();
+  // ── 초기 로드 (localStorage → 서버 마이그레이션 포함) ──
+  async function init() {
+    loadContacts();
+
+    // 기존 localStorage 데이터를 서버로 마이그레이션
+    try {
+      const old = JSON.parse(localStorage.getItem('sms_templates') || '[]');
+      if (old.length > 0) {
+        for (const t of old) {
+          await fetch('/api/templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: t.title, content: t.content }),
+          });
+        }
+        localStorage.removeItem('sms_templates');
+      }
+    } catch {}
+
+    await loadTemplates();
+  }
+  init();
 </script>
 </body>
 </html>
